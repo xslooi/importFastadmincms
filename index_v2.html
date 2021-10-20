@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>织梦模板文件转换为Fastadmin-cms模板文件</title>
+
+    <link href="public/css/jquery-ui.css" rel="stylesheet">
+    <!--顶部提示插件-->
+    <link href="public/css/overhang.min.css" rel="stylesheet">
+    <link href="public/css/custom.css" rel="stylesheet">
+
+    <script data-main="public/js/main-v2" src="public/js/require.js"></script>
+    <!-- todo 谨记：main.js 加载了两次当然里边代码执行两次  <script src="public/js/main.js"></script>-->
+</head>
+<body>
+
+<div class="custom-state-box">
+    <h2 class="demoHeaders">状态显示：<b style="color: red;">（版本二：织梦模板文件转换为Fastadmin-cms模板文件）</b><a href="javascript:;" id="backMenu">返回菜单</a></h2>
+    <div class="custom-state-container">
+        <ol>
+            <li>
+                <fieldset>
+                    <legend>转换进度</legend>
+                    <div id="progressbar"></div>
+                </fieldset>
+            </li>
+            <li>
+                <fieldset>
+                    <legend>控制面板</legend>
+                    <!--<button id="loadconfig-button" class="ui-button ui-corner-all ui-widget">加载当前配置</button>-->
+                    <button id="start-button" class="ui-button ui-corner-all ui-widget">开始转换</button>
+                </fieldset>
+            </li>
+        </ol>
+    </div>
+</div>
+
+<!-- 手风琴 -->
+<h2 class="demoHeaders">操作步骤：<span style="color: red;">注意要转换两遍，第一遍扫描文件内部include文件列表并配置！</span></h2>
+
+
+<div id="accordion">
+    <h3>模板文件遗漏（不能）转换列表</h3>
+    <div id="convertContainer" class="container one" style="height: 200px;overflow: auto">
+      <ol id="convertList">
+          --此处展示遗漏（未转换）列表--
+      </ol>
+    </div>
+</div>
+
+
+</body>
+</html>

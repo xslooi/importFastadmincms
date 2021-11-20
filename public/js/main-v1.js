@@ -338,6 +338,27 @@ requirejs(['jquery', 'custom', 'jquery.ui', 'jquery.ztree.all.min'], function($,
         });
     };
 
+    functionLib.setCookie = function(name, value) {
+        var Days = 1;
+        var exp = new Date();
+        exp.setTime(exp.getTime() + Days * 24 * 60 * 60 * 1000);
+        document.cookie = name + "=" + escape(value) + ";expires=" + exp.toGMTString();
+    }
+
+    functionLib.getCookie = function(name) {
+        var arr, reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
+
+        if (arr = document.cookie.match(reg)) return unescape(arr[2]);
+        else return null;
+    }
+
+    functionLib.delCookie = function(name) {
+        var exp = new Date();
+        exp.setTime(exp.getTime() - 1);
+        var cval = functionLib.getCookie(name);
+        if (cval != null) document.cookie = name + "=" + cval + ";expires=" + exp.toGMTString();
+    }
+
     /**
      * 显示导出附加表不同的字段
      * @param data
@@ -435,6 +456,21 @@ requirejs(['jquery', 'custom', 'jquery.ui', 'jquery.ztree.all.min'], function($,
         }
 
         console.log(isFastCategory);
+        // 移除临时添加站位的无用数据
+        var isRemoveUseless = $("#remove-useless").is(':checked');
+        if(isRemoveUseless){
+            custom.start('v4');
+            return;
+        }
+
+        // 文章id是否重新排序导入
+        var archiveidReset = $("#archiveid-reset").is(':checked');
+        if(archiveidReset){
+            functionLib.setCookie("is_archiveid_reset", "xslooi");
+        }
+        else{
+            functionLib.delCookie("is_archiveid_reset");
+        }
 
         var confirmStr = '确定从【' + $("#from-type-state").text() + '】导入到【' + $("#to-type-state").text() + '】？';
 

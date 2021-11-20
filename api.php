@@ -751,6 +751,27 @@ function act_start_v3($data) {
     }
 }
 
+function act_start_v4($data) {
+    $rs = fastadmincms_remove_useless_data();
+
+    if($rs){
+        return array(
+            'id' => 8,
+            'state' => 0,
+            'msg' => '恭喜，无用的数据（useless）已删除！',
+            'data' => array()
+        );
+    }
+    else{
+        return array(
+            'id' => 6,
+            'state' => -1,
+            'msg' => 'error',
+            'data' => array()
+        );
+    }
+}
+
 //===================================================================
 //其他作用区
 //===================================================================
@@ -1017,6 +1038,7 @@ function getFastadminModel($cid, $db){
  * @param $toLink
  */
 function insertFastadminOne($fromResults, $totype, $db){
+    $is_archiveid_reset = isset($_COOKIE['is_archiveid_reset']) ? true : false;
 
     $channel = getFastadminChannel($totype, $db);
     $model = getFastadminModel($channel['model_id'], $db);
@@ -1025,6 +1047,12 @@ function insertFastadminOne($fromResults, $totype, $db){
     $addontablestruct = array();
     foreach($table_desc as $item){
         $addontablestruct[] = $item['Field'];
+    }
+
+    $insertTemporaryResult = true;
+    if(!$is_archiveid_reset){
+        // 插入临时数据 枚举类型 ’0‘ 字符处理
+        $insertTemporaryResult = insertTemporaryData($fromResults, $model, $addontablestruct, $db);
     }
 
 
@@ -1065,14 +1093,27 @@ function insertFastadminOne($fromResults, $totype, $db){
         $fromResults['description'] = addslashes(mb_substr(strip_tags($fromResults['body']), 0, 200));
     }
 
-    // 插入文章主表
-    $iquery = " INSERT INTO `#@__cms_archives`(`user_id`, `channel_id`, `channel_ids`, `model_id`, `special_ids`, `admin_id`, `title`, `flag`, `style`, `image`, `images`, `seotitle`, `keywords`, `description`, `tags`, `price`, `outlink`, `weigh`, `views`, `comments`, `likes`, `dislikes`, `diyname`, `isguest`, `iscomment`, `createtime`, `updatetime`, `publishtime`, `deletetime`, `memo`, `status`) VALUES 
+
+
+    // 插入id比表中最大id大或者是重新排序插入
+    if($insertTemporaryResult){
+        // 插入文章主表
+        $iquery = " INSERT INTO `#@__cms_archives` (`user_id`, `channel_id`, `channel_ids`, `model_id`, `special_ids`, `admin_id`, `title`, `flag`, `style`, `image`, `images`, `seotitle`, `keywords`, `description`, `tags`, `price`, `outlink`, `weigh`, `views`, `comments`, `likes`, `dislikes`, `diyname`, `isguest`, `iscomment`, `createtime`, `updatetime`, `publishtime`, `deletetime`, `memo`, `status`) VALUES 
  ( 0, '{$totype}', '', '{$channel['model_id']}', '', 1, '{$fromResults['title']}', '{$flag}', '', '{$fromResults['litpic']}', '', '', '{$fromResults['keywords']}', '{$fromResults['description']}', '', 0.00, '{$outlink}', '{$fromResults['weight']}', '{$fromResults['click']}', 0, 0, 0, '{$diyname}', 10, 10, '{$fromResults['senddate']}', '{$fromResults['senddate']}', '{$fromResults['pubdate']}', NULL, '', 'normal');";
 // echo $iquery;
+        $db->query($iquery);
+        $arcID = $db->insert_id();
+    }
+    else{
+        $iquery = "
+UPDATE `#@__cms_archives` SET `user_id` = 0, `channel_id` = '{$totype}', `channel_ids` = '', `model_id` = '{$channel['model_id']}', `special_ids` = '', `admin_id` = 1, `title` = '{$fromResults['title']}', `flag` = '{$flag}', `style` = '', `image` = '{$fromResults['litpic']}', `images` = '', `seotitle` = '', `keywords` = '{$fromResults['keywords']}', `description` = '{$fromResults['description']}', `tags` = '', `price` = 0.00, `outlink` = '{$outlink}', `weigh` = '{$fromResults['weight']}', `views` = '{$fromResults['click']}', `comments` = 0, `likes` = 0, `dislikes` = 0, `diyname` = '{$diyname}', `isguest` = 10, `iscomment` = 10, `createtime` = '{$fromResults['senddate']}', `updatetime` = '{$fromResults['senddate']}', `publishtime` = '{$fromResults['pubdate']}', `deletetime` = NULL, `memo` = '', `status` = 'normal' WHERE `id` = '{$fromResults['id']}';
+";
+// echo $iquery;
+        $db->query($iquery);
+        $arcID = $fromResults['id'];
+    }
 
 
-    $db->query($iquery);
-    $arcID = $db->insert_id();
 // var_dump($arcID);
 
 // 插入文章附加表
@@ -1110,6 +1151,47 @@ function insertFastadminOne($fromResults, $totype, $db){
     }
 
     return true;
+}
+
+
+/**
+ * 插入无用的数据，递增文章id
+ * @param $fromResults
+ * @param $model
+ * @param $addontablestruct
+ * @param $db
+ */
+function insertTemporaryData($fromResults, $model, $addontablestruct, $db){
+
+    $default_values = array(
+        'title' => 'useless',
+        'keywords' => 'can be delete',
+    );
+
+    $sql = " SELECT MAX(id) AS max_num FROM `#@__cms_archives` ";
+    $db->query($sql);
+    $res = $db->fetch_array();
+    $max_num = (int)$res[0]['max_num'];
+//    var_dump($count);
+//    var_dump($addontablestruct);
+    // 如果插入id大于当前最大自增id才插入
+    if($fromResults['id'] > $max_num){
+
+        $sql_insert = " INSERT INTO `#@__cms_archives` (`user_id`, `channel_id`, `channel_ids`, `model_id`, `special_ids`, `admin_id`, `title`, `flag`, `style`, `image`, `images`, `seotitle`, `keywords`, `description`, `tags`, `price`, `outlink`, `weigh`, `views`, `comments`, `likes`, `dislikes`, `diyname`, `isguest`, `iscomment`, `createtime`, `updatetime`, `publishtime`, `deletetime`, `memo`, `status`) 
+ VALUES ('0', '0', '0', '0', '0', '0', '{$default_values['title']}', '0', '0', '0', '0', '0', '{$default_values['keywords']}', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', 'normal');
+ ";
+//echo $sql_insert;
+//    var_dump($fromResults['id']);
+        // 循环插入无用的站位数据
+        while($fromResults['id'] > ++$max_num){
+            $db->query($sql_insert);
+            $insert_id = $db->insert_id();
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 
@@ -2273,7 +2355,6 @@ function convert_dede_doubleclosure_tag($params, $templets, $tag){
                 '{$nav.image}',
                 '{$nav.title}',
                 '{$nav.url}',
-                '{$nav.url}',
                 '',
             );
         }
@@ -2638,6 +2719,31 @@ function inspect_dede_miss_tags(){
     file_put_contents($path_log, var_export($miss_log, true) . PHP_EOL);
 
     return $miss_log;
+}
+
+
+/**
+ * 删除临时添加的无用数据
+ * @return bool
+ */
+function fastadmincms_remove_useless_data(){
+    //目标数据库
+    $to_config = config('to_db');
+    $TO_DB = new DataBase($to_config);
+
+    $sql = " SELECT COUNT(id) AS num FROM `#@__cms_archives` WHERE title = 'useless' AND admin_id = 0 ";
+    $TO_DB->query($sql);
+    $result = $TO_DB->fetch_array();
+
+    if($result){
+
+        $sql_delete = " DELETE FROM `#@__cms_archives` WHERE title = 'useless' AND admin_id = 0 ";
+        $TO_DB->query($sql_delete);
+
+        return true;
+    }
+
+    return false;
 }
 
 
